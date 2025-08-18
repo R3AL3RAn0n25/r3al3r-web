@@ -1,0 +1,5 @@
+```
+[Definition]
+failregex = ^.*Potential intrusion detected:.*$
+ignoreregex =
+```

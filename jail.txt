@@ -1,0 +1,10 @@
+```
+[r3al3r-api]
+enabled = true
+port = 5000
+filter = r3al3r-api
+logpath = /path/to/r3al3r.log
+maxretry = 5
+bantime = 3600
+findtime = 600
+```
