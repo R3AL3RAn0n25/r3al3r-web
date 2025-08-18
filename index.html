@@ -1,0 +1,124 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>R3ÆLƎR AI</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
+        input, button, select { margin: 10px; padding: 8px; width: 200px; }
+        #output { margin-top: 20px; font-size: 16px; }
+        .container { max-width: 600px; margin: auto; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>R3ÆLƎR AI</h1>
+        <input id="userId" placeholder="User ID" />
+        <button onclick="login()">Login</button>
+        <br>
+        <select id="taskType">
+            <option value="analysis">Analysis</option>
+            <option value="prediction">Prediction</option>
+            <option value="ideation">Ideation</option>
+            <option value="pattern">Pattern</option>
+            <option value="treadmill">Treadmill Track</option>
+        </select>
+        <input id="inputData" placeholder="CSV Path (optional)" />
+        <button onclick="getInsight()">Get Insight</button>
+        <button onclick="subscribe()">Subscribe</button>
+        <button onclick="getInsights()">View Insights</button>
+        <button onclick="adaptData()">Adapt Data</button>
+        <button onclick="getAffidavit()">Get Affidavit</button>
+        <br>
+        <a href="http://your-server:5000/download" download>Download APK</a>
+        <p id="output"></p>
+    </div>
+    <script>
+        let token = '';
+        async function login() {
+            const userId = document.getElementById('userId').value;
+            try {
+                const response = await fetch('http://your-server:5000/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId })
+                });
+                const data = await response.json();
+                if (data.token) {
+                    token = data.token;
+                    document.getElementById('output').innerText = 'Logged in successfully!';
+                } else {
+                    document.getElementById('output').innerText = data.error;
+                }
+            } catch (e) {
+                document.getElementById('output').innerText = 'Error logging in';
+            }
+        }
+        async function getInsight() {
+            const taskType = document.getElementById('taskType').value;
+            const inputData = document.getElementById('inputData').value || null;
+            try {
+                const response = await fetch('http://your-server:5000/api/insight', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ task_type: taskType, input_data: inputData })
+                });
+                const data = await response.json();
+                document.getElementById('output').innerText = data.insight || data.error;
+            } catch (e) {
+                document.getElementById('output').innerText = 'Error generating insight';
+            }
+        }
+        async function subscribe() {
+            try {
+                const response = await fetch('http://your-server:5000/api/subscribe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ plan: 'monthly' })
+                });
+                const data = await response.json();
+                document.getElementById('output').innerText = data.message || data.error;
+            } catch (e) {
+                document.getElementById('output').innerText = 'Error subscribing';
+            }
+        }
+        async function getInsights() {
+            try {
+                const response = await fetch('http://your-server:5000/api/insights', {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                document.getElementById('output').innerText = data.insights.join('\n') || data.error;
+            } catch (e) {
+                document.getElementById('output').innerText = 'Error retrieving insights';
+            }
+        }
+        async function adaptData() {
+            const inputData = document.getElementById('inputData').value || null;
+            try {
+                const response = await fetch('http://your-server:5000/api/adapt', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ data: inputData })
+                });
+                const data = await response.json();
+                document.getElementById('output').innerText = data.message || data.error;
+            } catch (e) {
+                document.getElementById('output').innerText = 'Error adapting data';
+            }
+        }
+        async function getAffidavit() {
+            try {
+                const response = await fetch('http://your-server:5000/api/affidavit');
+                const data = await response.json();
+                document.getElementById('output').innerText = data.affidavit;
+            } catch (e) {
+                document.getElementById('output').innerText = 'Error retrieving affidavit';
+            }
+        }
+    </script>
+</body>
+</html>
+```
