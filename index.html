@@ -1,33 +1,78 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script>```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>R3ÆLƎR AI</title>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; }
-        input, button, select { margin: 10px; padding: 5px; }
-        #output { margin-top: 20px; }
+        body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
+        input, button, select { margin: 10px; padding: 8px; width: 200px; }
+        #output { margin-top: 20px; font-size: 16px; }
+        .container { max-width: 600px; margin: auto; }
     </style>
 </head>
 <body>
-    <h1>R3ÆLƎR AI</h1>
-    <input id="userId" placeholder="User ID" />
-    <button onclick="login()">Login</button>
-    <br>
-    <select id="taskType">
-        <option value="analysis">Analysis</option>
-        <option value="prediction">Prediction</option>
-        <option value="ideation">Ideation</option>
-        <option value="pattern">Pattern</option>
-    </select>
-    <input id="inputData" placeholder="CSV Path (optional)" />
-    <button onclick="getInsight()">Get Insight</button>
-    <button onclick="subscribe()">Subscribe</button>
-    <button onclick="getInsights()">View Insights</button>
-    <button onclick="adaptData()">Adapt Data</button>
-    <button onclick="getAffidavit()">Get Affidavit</button>
-    <a href="http://your-server:5000/download" download>Download APK</a>
-    <p id="output"></p>
+    <div class="container">
+        <h1>R3ÆLƎR AI</h1>
+        <input id="userId" placeholder="User ID" />
+        <button onclick="login()">Login</button>
+        <br>
+        <select id="taskType">
+            <option value="analysis">Analysis</option>
+            <option value="prediction">Prediction</option>
+            <option value="ideation">Ideation</option>
+            <option value="pattern">Pattern</option>
+            <option value="treadmill">Treadmill Track</option>
+        </select>
+        <input id="inputData" placeholder="CSV Path (optional)" />
+        <button onclick="getInsight()">Get Insight</button>
+        <button onclick="subscribe()">Subscribe</button>
+        <button onclick="getInsights()">View Insights</button>
+        <button onclick="adaptData()">Adapt Data</button>
+        <button onclick="getAffidavit()">Get Affidavit</button>
+        <br>
+        <a href="http://your-server:5000/download" download>Download APK</a>
+        <p id="output"></p>
+    </div>
     <script>
         let token = '';
         async function login() {
@@ -41,7 +86,7 @@
                 const data = await response.json();
                 if (data.token) {
                     token = data.token;
-                    document.getElementById('output').innerText = 'Logged in!';
+                    document.getElementById('output').innerText = 'Logged in successfully!';
                 } else {
                     document.getElementById('output').innerText = data.error;
                 }
@@ -115,3 +160,4 @@
     </script>
 </body>
 </html>
+```
