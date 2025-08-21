@@ -1,77 +1,60 @@
-<script type="text/javascript">
-        var gk_isXlsx = false;
-        var gk_xlsxFileLookup = {};
-        var gk_fileData = {};
-        function filledCell(cell) {
-          return cell !== '' && cell != null;
-        }
-        function loadFileData(filename) {
-        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
-            try {
-                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
-                var firstSheetName = workbook.SheetNames[0];
-                var worksheet = workbook.Sheets[firstSheetName];
-
-                // Convert sheet to JSON to filter blank rows
-                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
-                // Filter out blank rows (rows where all cells are empty, null, or undefined)
-                var filteredData = jsonData.filter(row => row.some(filledCell));
-
-                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
-                var headerRowIndex = filteredData.findIndex((row, index) =>
-                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
-                );
-                // Fallback
-                if (headerRowIndex === -1 || headerRowIndex > 25) {
-                  headerRowIndex = 0;
-                }
-
-                // Convert filtered JSON back to CSV
-                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
-                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
-                return csv;
-            } catch (e) {
-                console.error(e);
-                return "";
-            }
-        }
-        return gk_fileData[filename] || "";
-        }
-        </script>```html
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>R3ÆLƎR AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#1E3A8A',
+                        secondary: '#3B82F6',
+                    },
+                },
+            },
+            darkMode: 'class',
+        }
+    </script>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
-        input, button, select { margin: 10px; padding: 8px; width: 200px; }
-        #output { margin-top: 20px; font-size: 16px; }
-        .container { max-width: 600px; margin: auto; }
+        body { transition: background-color 0.3s ease; }
+        button:hover { transform: scale(1.05); transition: transform 0.2s ease; }
+        .container { animation: fadeIn 0.5s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        pre { background: #1f2937; padding: 1rem; border-radius: 0.5rem; color: #f3f4f6; overflow-x: auto; }
     </style>
 </head>
-<body>
-    <div class="container">
-        <h1>R3ÆLƎR AI</h1>
-        <input id="userId" placeholder="User ID" />
-        <button onclick="login()">Login</button>
-        <br>
-        <select id="taskType">
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen flex items-center justify-center">
+    <div class="container max-w-md mx-auto p-6 bg-white dark:bg-gray-800 rounded-xl shadow-lg">
+        <h1 class="text-3xl font-bold mb-6 text-center text-primary dark:text-secondary">R3ÆLƎR AI</h1>
+        <input id="userId" placeholder="User ID" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded mb-4 bg-gray-50 dark:bg-gray-700" />
+        <button onclick="login()" class="w-full bg-primary text-white p-2 rounded hover:bg-secondary transition-colors">Login</button>
+        <select id="taskType" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded my-4 bg-gray-50 dark:bg-gray-700">
             <option value="analysis">Analysis</option>
             <option value="prediction">Prediction</option>
             <option value="ideation">Ideation</option>
             <option value="pattern">Pattern</option>
-            <option value="treadmill">Treadmill Track</option>
+            <option value="treadmill">Treadmill</option>
         </select>
-        <input id="inputData" placeholder="CSV Path (optional)" />
-        <button onclick="getInsight()">Get Insight</button>
-        <button onclick="subscribe()">Subscribe</button>
-        <button onclick="getInsights()">View Insights</button>
-        <button onclick="adaptData()">Adapt Data</button>
-        <button onclick="getAffidavit()">Get Affidavit</button>
-        <br>
-        <a href="http://your-server:5000/download" download>Download APK</a>
-        <p id="output"></p>
+        <input id="inputData" placeholder="CSV Path (optional)" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded mb-4 bg-gray-50 dark:bg-gray-700" />
+        <button onclick="getInsight()" class="w-full bg-primary text-white p-2 rounded hover:bg-secondary transition-colors">Get Insight</button>
+        <button onclick="subscribe()" class="w-full bg-primary text-white p-2 rounded my-2 hover:bg-secondary transition-colors">Subscribe</button>
+        <button onclick="getInsights()" class="w-full bg-primary text-white p-2 rounded my-2 hover:bg-secondary transition-colors">View Insights</button>
+        <button onclick="adaptData()" class="w-full bg-primary text-white p-2 rounded my-2 hover:bg-secondary transition-colors">Adapt Data</button>
+        <button onclick="getAffidavit()" class="w-full bg-primary text-white p-2 rounded my-2 hover:bg-secondary transition-colors">Get Affidavit</button>
+        <input id="language" placeholder="Language (e.g., Python)" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded my-4 bg-gray-50 dark:bg-gray-700" />
+        <button onclick="getProgrammingInfo()" class="w-full bg-primary text-white p-2 rounded my-2 hover:bg-secondary transition-colors">Get Programming Info</button>
+        <button onclick="getPenTestInfo()" class="w-full bg-primary text-white p-2 rounded my-2 hover:bg-secondary transition-colors">Get Pen Testing Info</button>
+        <button onclick="getSecurityAnalysisInfo()" class="w-full bg-primary text-white p-2 rounded my-2 hover:bg-secondary transition-colors">Get Security Analysis Info</button>
+        <input id="category" placeholder="Category (e.g., CRM)" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded my-4 bg-gray-50 dark:bg-gray-700" />
+        <button onclick="getSoftwareRecommend()" class="w-full bg-primary text-white p-2 rounded my-2 hover:bg-secondary transition-colors">Get Software Recommendations</button>
+        <input id="codeTask" placeholder="Task (e.g., print hello)" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded my-4 bg-gray-50 dark:bg-gray-700" />
+        <button onclick="codeGenerate()" class="w-full bg-primary text-white p-2 rounded my-2 hover:bg-secondary transition-colors">Generate Code</button>
+        <a href="http://your-server:5000/download" download class="block w-full text-center bg-secondary text-white p-2 rounded my-2 hover:bg-primary transition-colors">Download APK</a>
+        <pre id="output" class="mt-6 text-center text-lg"></pre>
+        <button onclick="toggleDarkMode()" class="w-full bg-gray-500 text-white p-2 rounded mt-4 hover:bg-gray-600 transition-colors">Toggle Dark Mode</button>
     </div>
     <script>
         let token = '';
@@ -84,19 +67,15 @@
                     body: JSON.stringify({ user_id: userId })
                 });
                 const data = await response.json();
-                if (data.token) {
-                    token = data.token;
-                    document.getElementById('output').innerText = 'Logged in successfully!';
-                } else {
-                    document.getElementById('output').innerText = data.error;
-                }
+                token = data.token;
+                document.getElementById('output').innerText = token ? 'Login successful' : data.error;
             } catch (e) {
                 document.getElementById('output').innerText = 'Error logging in';
             }
         }
         async function getInsight() {
             const taskType = document.getElementById('taskType').value;
-            const inputData = document.getElementById('inputData').value || null;
+            const inputData = document.getElementById('inputData').value;
             try {
                 const response = await fetch('http://your-server:5000/api/insight', {
                     method: 'POST',
@@ -129,13 +108,13 @@
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const data = await response.json();
-                document.getElementById('output').innerText = data.insights.join('\n') || data.error;
+                document.getElementById('output').innerText = data.insights ? data.insights.join('\n') : data.error;
             } catch (e) {
                 document.getElementById('output').innerText = 'Error retrieving insights';
             }
         }
         async function adaptData() {
-            const inputData = document.getElementById('inputData').value || null;
+            const inputData = document.getElementById('inputData').value;
             try {
                 const response = await fetch('http://your-server:5000/api/adapt', {
                     method: 'POST',
@@ -152,12 +131,75 @@
             try {
                 const response = await fetch('http://your-server:5000/api/affidavit');
                 const data = await response.json();
-                document.getElementById('output').innerText = data.affidavit;
+                document.getElementById('output').innerText = data.affidavit || data.error;
             } catch (e) {
                 document.getElementById('output').innerText = 'Error retrieving affidavit';
             }
         }
+        async function getProgrammingInfo() {
+            const language = document.getElementById('language').value;
+            try {
+                const response = await fetch(`http://your-server:5000/api/programming_info?language=${language}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                document.getElementById('output').innerText = data.description || data.error;
+            } catch (e) {
+                document.getElementById('output').innerText = 'Error retrieving programming info';
+            }
+        }
+        async function getPenTestInfo() {
+            try {
+                const response = await fetch('http://your-server:5000/api/pen_test_info', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                document.getElementById('output').innerText = data.techniques ? `${data.techniques.join(', ')}\n${data.tools.join(', ')}` : data.error;
+            } catch (e) {
+                document.getElementById('output').innerText = 'Error retrieving pen testing info';
+            }
+        }
+        async function getSecurityAnalysisInfo() {
+            try {
+                const response = await fetch('http://your-server:5000/api/security_analysis_info', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                document.getElementById('output').innerText = data.methodologies ? `${data.methodologies.join(', ')}\n${data.tools.join(', ')}` : data.error;
+            } catch (e) {
+                document.getElementById('output').innerText = 'Error retrieving security analysis info';
+            }
+        }
+        async function getSoftwareRecommend() {
+            const category = document.getElementById('category').value;
+            try {
+                const response = await fetch(`http://your-server:5000/api/software_recommend?category=${category}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                document.getElementById('output').innerText = data.programs ? data.programs.join(', ') : data.error;
+            } catch (e) {
+                document.getElementById('output').innerText = 'Error retrieving software recommendations';
+            }
+        }
+        async function codeGenerate() {
+            const language = document.getElementById('language').value;
+            const task = document.getElementById('codeTask').value;
+            try {
+                const response = await fetch('http://your-server:5000/api/code_generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ language: language, task: task })
+                });
+                const data = await response.json();
+                document.getElementById('output').innerHTML = data.code ? `<pre>${data.code}</pre>` : data.error;
+            } catch (e) {
+                document.getElementById('output').innerText = 'Error generating code';
+            }
+        }
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+        }
     </script>
 </body>
 </html>
-```
