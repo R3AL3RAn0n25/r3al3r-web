@@ -178,7 +178,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> login() async {
     final response = await http.post(
-      Uri.parse('http://172.23.47.55/api/login'), // Replace with server IP
+      Uri.parse('http://your-server:5000/api/login'), // Replace with server IP
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'user_id': _userIdController.text}),
     );
