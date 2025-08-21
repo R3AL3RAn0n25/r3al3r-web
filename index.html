@@ -1,205 +1,314 @@
-<!DOCTYPE html>
-<html lang="en" class="dark">
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>R3ÆLƎR AI</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#1E3A8A',
-                        secondary: '#3B82F6',
-                    },
-                },
-            },
-            darkMode: 'class',
-        }
-    </script>
     <style>
-        body { transition: background-color 0.3s ease; }
-        button:hover { transform: scale(1.05); transition: transform 0.2s ease; }
-        .container { animation: fadeIn 0.5s ease; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        pre { background: #1f2937; padding: 1rem; border-radius: 0.5rem; color: #f3f4f6; overflow-x: auto; }
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            color: #0f0;
+            background: black;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: -1;
+        }
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 10px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        h1 {
+            text-align: center;
+            font-size: 2.5em;
+            text-shadow: 0 0 10px #0f0;
+        }
+        .login, .main {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .main {
+            display: none;
+        }
+        input, button, select {
+            padding: 10px;
+            font-size: 1em;
+            border: 1px solid #0f0;
+            background: #111;
+            color: #0f0;
+            border-radius: 5px;
+        }
+        button {
+            cursor: pointer;
+            background: #0f0;
+            color: black;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #0a0;
+        }
+        pre {
+            background: #111;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        #theme-toggle {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+        }
     </style>
 </head>
-<body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen flex items-center justify-center">
-    <div class="container max-w-md mx-auto p-6 bg-white dark:bg-gray-800 rounded-xl shadow-lg">
-        <h1 class="text-3xl font-bold mb-6 text-center text-primary dark:text-secondary">R3ÆLƎR AI</h1>
-        <input id="userId" placeholder="User ID" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded mb-4 bg-gray-50 dark:bg-gray-700" />
-        <button onclick="login()" class="w-full bg-primary text-white p-2 rounded hover:bg-secondary transition-colors">Login</button>
-        <select id="taskType" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded my-4 bg-gray-50 dark:bg-gray-700">
-            <option value="analysis">Analysis</option>
-            <option value="prediction">Prediction</option>
-            <option value="ideation">Ideation</option>
-            <option value="pattern">Pattern</option>
-            <option value="treadmill">Treadmill</option>
-        </select>
-        <input id="inputData" placeholder="CSV Path (optional)" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded mb-4 bg-gray-50 dark:bg-gray-700" />
-        <button onclick="getInsight()" class="w-full bg-primary text-white p-2 rounded hover:bg-secondary transition-colors">Get Insight</button>
-        <button onclick="subscribe()" class="w-full bg-primary text-white p-2 rounded my-2 hover:bg-secondary transition-colors">Subscribe</button>
-        <button onclick="getInsights()" class="w-full bg-primary text-white p-2 rounded my-2 hover:bg-secondary transition-colors">View Insights</button>
-        <button onclick="adaptData()" class="w-full bg-primary text-white p-2 rounded my-2 hover:bg-secondary transition-colors">Adapt Data</button>
-        <button onclick="getAffidavit()" class="w-full bg-primary text-white p-2 rounded my-2 hover:bg-secondary transition-colors">Get Affidavit</button>
-        <input id="language" placeholder="Language (e.g., Python)" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded my-4 bg-gray-50 dark:bg-gray-700" />
-        <button onclick="getProgrammingInfo()" class="w-full bg-primary text-white p-2 rounded my-2 hover:bg-secondary transition-colors">Get Programming Info</button>
-        <button onclick="getPenTestInfo()" class="w-full bg-primary text-white p-2 rounded my-2 hover:bg-secondary transition-colors">Get Pen Testing Info</button>
-        <button onclick="getSecurityAnalysisInfo()" class="w-full bg-primary text-white p-2 rounded my-2 hover:bg-secondary transition-colors">Get Security Analysis Info</button>
-        <input id="category" placeholder="Category (e.g., CRM)" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded my-4 bg-gray-50 dark:bg-gray-700" />
-        <button onclick="getSoftwareRecommend()" class="w-full bg-primary text-white p-2 rounded my-2 hover:bg-secondary transition-colors">Get Software Recommendations</button>
-        <input id="codeTask" placeholder="Task (e.g., print hello)" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded my-4 bg-gray-50 dark:bg-gray-700" />
-        <button onclick="codeGenerate()" class="w-full bg-primary text-white p-2 rounded my-2 hover:bg-secondary transition-colors">Generate Code</button>
-        <a href="http://your-server:5000/download" download class="block w-full text-center bg-secondary text-white p-2 rounded my-2 hover:bg-primary transition-colors">Download APK</a>
-        <pre id="output" class="mt-6 text-center text-lg"></pre>
-        <button onclick="toggleDarkMode()" class="w-full bg-gray-500 text-white p-2 rounded mt-4 hover:bg-gray-600 transition-colors">Toggle Dark Mode</button>
+<body>
+    <canvas id="matrix"></canvas>
+    <button id="theme-toggle">Toggle Theme</button>
+    <div class="container">
+        <h1>R3ÆLƎR AI</h1>
+        <div class="login" id="login">
+            <input type="text" id="userId" placeholder="User ID">
+            <button onclick="login()">Login</button>
+        </div>
+        <div class="main" id="main">
+            <input type="text" id="inputData" placeholder="Input Data (CSV path)">
+            <select id="taskType">
+                <option value="analysis">Analysis</option>
+                <option value="prediction">Prediction</option>
+                <option value="ideation">Ideation</option>
+                <option value="pattern">Pattern</option>
+                <option value="treadmill">Treadmill</option>
+            </select>
+            <button onclick="generateInsight()">Generate Insight</button>
+            <input type="text" id="language" placeholder="Language (e.g., Python)">
+            <input type="text" id="task" placeholder="Task (e.g., print hello)">
+            <button onclick="generateCode()">Generate Code</button>
+            <button onclick="subscribe()">Subscribe</button>
+            <button onclick="getInsights()">View Insights</button>
+            <button onclick="downloadApk()">Download APK</button>
+            <pre id="output"></pre>
+        </div>
     </div>
     <script>
+        const API_URL = 'http://47.215.15.217:5000'; // Replace with server IP
         let token = '';
+
+        // Matrix animation
+        const canvas = document.getElementById('matrix');
+        const ctx = canvas.getContext('2d');
+        canvas.height = window.innerHeight;
+        canvas.width = window.innerWidth;
+        const chars = '01';
+        const fontSize = 14;
+        const columns = canvas.width / fontSize;
+        const drops = Array(Math.floor(columns)).fill(1);
+        const facePattern = [
+            '      1111      ',
+            '    11    11    ',
+            '   1  00  00 1  ',
+            '   1 0  0 0  1  ',
+            '    11 0 0 11   ',
+            '      1111      '
+        ];
+        let faceX = canvas.width / 2 - (facePattern[0].length * fontSize) / 2;
+        let faceY = canvas.height / 2 - (facePattern.length * fontSize) / 2;
+        let faceProgress = 0;
+
+        function draw() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#0f0';
+            ctx.font = fontSize + 'px monospace';
+
+            for (let i = 0; i < drops.length; i++) {
+                const text = chars.charAt(Math.floor(Math.random() * chars.length));
+                const x = i * fontSize;
+                const y = drops[i] * fontSize;
+
+                // Check if current position is part of the face
+                let isFacePixel = false;
+                if (faceProgress < facePattern.length * facePattern[0].length) {
+                    const faceRow = Math.floor(faceProgress / facePattern[0].length);
+                    const faceCol = faceProgress % facePattern[0].length;
+                    const faceChar = facePattern[faceRow]?.[faceCol];
+                    if (faceChar === '1' || faceChar === '0') {
+                        const facePixelX = faceX + faceCol * fontSize;
+                        const facePixelY = faceY + faceRow * fontSize;
+                        if (Math.abs(x - facePixelX) < fontSize && Math.abs(y - facePixelY) < fontSize) {
+                            ctx.fillText(faceChar, x, y);
+                            isFacePixel = true;
+                            faceProgress++;
+                        }
+                    }
+                }
+
+                if (!isFacePixel) {
+                    ctx.fillText(text, x, y);
+                }
+
+                if (y > canvas.height && Math.random() > 0.975) drops[i] = 0;
+                drops[i]++;
+            }
+        }
+        setInterval(draw, 33);
+
         async function login() {
             const userId = document.getElementById('userId').value;
             try {
-                const response = await fetch('http://your-server:5000/api/login', {
+                const response = await fetch(`${API_URL}/api/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ user_id: userId })
                 });
                 const data = await response.json();
-                token = data.token;
-                document.getElementById('output').innerText = token ? 'Login successful' : data.error;
-            } catch (e) {
-                document.getElementById('output').innerText = 'Error logging in';
+                if (data.token) {
+                    token = data.token;
+                    document.getElementById('login').style.display = 'none';
+                    document.getElementById('main').style.display = 'flex';
+                } else {
+                    document.getElementById('output').textContent = 'Login failed: ' + data.error;
+                }
+            } catch (error) {
+                document.getElementById('output').textContent = 'Error: ' + error.message;
             }
         }
-        async function getInsight() {
-            const taskType = document.getElementById('taskType').value;
+
+        async function generateInsight() {
             const inputData = document.getElementById('inputData').value;
+            const taskType = document.getElementById('taskType').value;
             try {
-                const response = await fetch('http://your-server:5000/api/insight', {
+                const response = await fetch(`${API_URL}/api/insight`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ task_type: taskType, input_data: inputData })
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ input_data: inputData, task_type: taskType })
                 });
                 const data = await response.json();
-                document.getElementById('output').innerText = data.insight || data.error;
-            } catch (e) {
-                document.getElementById('output').innerText = 'Error generating insight';
+                document.getElementById('output').textContent = data.insight || data.error;
+            } catch (error) {
+                document.getElementById('output').textContent = 'Error: ' + error.message;
             }
         }
+
+        async function generateCode() {
+            const language = document.getElementById('language').value;
+            const task = document.getElementById('task').value;
+            try {
+                const response = await fetch(`${API_URL}/api/code_generate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ language, task })
+                });
+                const data = await response.json();
+                document.getElementById('output').textContent = data.code || data.error;
+            } catch (error) {
+                document.getElementById('output').textContent = 'Error: ' + error.message;
+            }
+        }
+
         async function subscribe() {
             try {
-                const response = await fetch('http://your-server:5000/api/subscribe', {
+                const response = await fetch(`${API_URL}/api/subscribe`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
                     body: JSON.stringify({ plan: 'monthly' })
                 });
                 const data = await response.json();
-                document.getElementById('output').innerText = data.message || data.error;
-            } catch (e) {
-                document.getElementById('output').innerText = 'Error subscribing';
+                document.getElementById('output').textContent = data.message || data.error;
+            } catch (error) {
+                document.getElementById('output').textContent = 'Error: ' + error.message;
             }
         }
+
         async function getInsights() {
             try {
-                const response = await fetch('http://your-server:5000/api/insights', {
+                const response = await fetch(`${API_URL}/api/insights`, {
                     method: 'GET',
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const data = await response.json();
-                document.getElementById('output').innerText = data.insights ? data.insights.join('\n') : data.error;
-            } catch (e) {
-                document.getElementById('output').innerText = 'Error retrieving insights';
+                document.getElementById('output').textContent = JSON.stringify(data.insights, null, 2) || data.error;
+            } catch (error) {
+                document.getElementById('output').textContent = 'Error: ' + error.message;
             }
         }
-        async function adaptData() {
-            const inputData = document.getElementById('inputData').value;
-            try {
-                const response = await fetch('http://your-server:5000/api/adapt', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ data: inputData })
-                });
-                const data = await response.json();
-                document.getElementById('output').innerText = data.message || data.error;
-            } catch (e) {
-                document.getElementById('output').innerText = 'Error adapting data';
-            }
+
+        function downloadApk() {
+            window.location.href = `${API_URL}/download`;
         }
-        async function getAffidavit() {
-            try {
-                const response = await fetch('http://your-server:5000/api/affidavit');
-                const data = await response.json();
-                document.getElementById('output').innerText = data.affidavit || data.error;
-            } catch (e) {
-                document.getElementById('output').innerText = 'Error retrieving affidavit';
-            }
-        }
-        async function getProgrammingInfo() {
-            const language = document.getElementById('language').value;
-            try {
-                const response = await fetch(`http://your-server:5000/api/programming_info?language=${language}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                const data = await response.json();
-                document.getElementById('output').innerText = data.description || data.error;
-            } catch (e) {
-                document.getElementById('output').innerText = 'Error retrieving programming info';
-            }
-        }
-        async function getPenTestInfo() {
-            try {
-                const response = await fetch('http://your-server:5000/api/pen_test_info', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                const data = await response.json();
-                document.getElementById('output').innerText = data.techniques ? `${data.techniques.join(', ')}\n${data.tools.join(', ')}` : data.error;
-            } catch (e) {
-                document.getElementById('output').innerText = 'Error retrieving pen testing info';
-            }
-        }
-        async function getSecurityAnalysisInfo() {
-            try {
-                const response = await fetch('http://your-server:5000/api/security_analysis_info', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                const data = await response.json();
-                document.getElementById('output').innerText = data.methodologies ? `${data.methodologies.join(', ')}\n${data.tools.join(', ')}` : data.error;
-            } catch (e) {
-                document.getElementById('output').innerText = 'Error retrieving security analysis info';
-            }
-        }
-        async function getSoftwareRecommend() {
-            const category = document.getElementById('category').value;
-            try {
-                const response = await fetch(`http://your-server:5000/api/software_recommend?category=${category}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                const data = await response.json();
-                document.getElementById('output').innerText = data.programs ? data.programs.join(', ') : data.error;
-            } catch (e) {
-                document.getElementById('output').innerText = 'Error retrieving software recommendations';
-            }
-        }
-        async function codeGenerate() {
-            const language = document.getElementById('language').value;
-            const task = document.getElementById('codeTask').value;
-            try {
-                const response = await fetch('http://your-server:5000/api/code_generate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ language: language, task: task })
-                });
-                const data = await response.json();
-                document.getElementById('output').innerHTML = data.code ? `<pre>${data.code}</pre>` : data.error;
-            } catch (e) {
-                document.getElementById('output').innerText = 'Error generating code';
-            }
-        }
-        function toggleDarkMode() {
-            document.documentElement.classList.toggle('dark');
-        }
+
+        document.getElementById('theme-toggle').addEventListener('click', () => {
+            document.body.style.background = document.body.style.background === 'black' ? '#222' : 'black';
+        });
+
+        window.addEventListener('resize', () => {
+            canvas.height = window.innerHeight;
+            canvas.width = window.innerWidth;
+            drops.length = Math.floor(canvas.width / fontSize);
+            for (let i = 0; i < drops.length; i++) drops[i] = 1;
+            faceX = canvas.width / 2 - (facePattern[0].length * fontSize) / 2;
+            faceY = canvas.height / 2 - (facePattern.length * fontSize) / 2;
+        });
     </script>
 </body>
 </html>
