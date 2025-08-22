@@ -43,7 +43,7 @@ except ImportError as e:
 app = Flask(__name__)
 SECRET_KEY = '65738d40a5c2202442e32f9f78222fd0aad1c7adc9936a55cbc5b2e61e1c9186'  # Replace with secure key in production
 EMAIL_ADDRESS = 'r3al3ran0n25@gmail.com'  # Replace with your Gmail
-EMAIL_PASSWORD = 'BradleyHughe$1816247365'# Generate from Gmail security settings
+EMAIL_PASSWORD = '*********'# Generate from Gmail security settings
 cache = cachetools.TTLCache(maxsize=100, ttl=300)
 blocklist = set()
 
