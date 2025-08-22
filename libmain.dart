@@ -178,7 +178,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> login() async {
     final response = await http.post(
-      Uri.parse('http://your-server:5000/api/login'), // Replace with server IP
+      Uri.parse('ip-172-31-38-60.us-east-2.compute.internal'), // Replace with server IP
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'user_id': _userIdController.text}),
     );
@@ -268,7 +268,7 @@ class _MainScreenState extends State<MainScreen> {
 
   Future<void> generateInsight() async {
     final response = await http.post(
-      Uri.parse('http://your-server:5000/api/insight'),
+      Uri.parse('ip-172-31-38-60.us-east-2.compute.internal/'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer ${widget.token}',
@@ -286,7 +286,7 @@ class _MainScreenState extends State<MainScreen> {
 
   Future<void> generateCode() async {
     final response = await http.post(
-      Uri.parse('http://your-server:5000/api/code_generate'),
+      Uri.parse('ip-172-31-38-60.us-east-2.compute.internal/api/code_generate'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer ${widget.token}',
