@@ -13,7 +13,7 @@ transformers
 stable-baselines3
 ecdsa
 flask
-flask-limiter
+flask-limiter>=1.4.0
 networkx
 snappy
 sympy
@@ -23,11 +23,10 @@ scikit-learn
 python-dotenv
 prometheus-client
 locust
-smtplib
 webrtcvad
 Pillow
 rdflib
 aif360
 faiss-cpu
-python-jwt
+pyjwt
 pybreaker
