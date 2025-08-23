@@ -61,19 +61,16 @@ def get_db():
     return cache['db']
 
 # Email alert system
-def send_alert(to_email, subject, body):
-    try:
-        msg = MIMEText(body)
-        msg['Subject'] = subject
-        msg['From'] = EMAIL_ADDRESS
-        msg['To'] = to_email
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-            server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
-            server.sendmail(EMAIL_ADDRESS, to_email, msg.as_string())
-        logging.info(f"Alert sent to {to_email}")
-    except Exception as e:
-        logging.error(f"Failed to send alert: {e}")
-
+def send_alert(subject, body):
+    import smtplib
+    from email.mime.text import MIMEText
+    msg = MIMEText(body)
+    msg["Subject"] = subject
+    msg["From"] = os.getenv("ALERT_EMAIL")
+    msg["To"] = os.getenv("ALERT_RECIPIENT")
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+        server.login(os.getenv("ALERT_EMAIL"), os.getenv("ALERT_PASSWORD"))
+        server.send_message(msg)
 # JWT authentication decorator with treadmill trap
 def require_auth(f):
     @wraps(f)
@@ -177,8 +174,9 @@ class Heart:
             return False
 
 class DroidVault:
-    def __init__(self, soul_key):
-        self.soul_key = soul_key
+    def self_destruct(self):
+        self.api_keys.clear()
+        logging.critical("DroidVault self-destructed")
 
     @watermark
     def generate_key(self, user_id):
@@ -200,12 +198,12 @@ class DroidVault:
                     return decrypt_data(self.generate_key(user_id).decode(), self.soul_key)
         raise PermissionError("Soul key or user_id invalid")
 
-    def soul_key_valid(self):
-        try:
-            dev = usb.core.find(idVendor=0x1234, idProduct=0x5678)  # Replace with your USB device IDs
-            return dev is not None
-        except:
-            return False
+   def soul_key_valid(soul_key):
+    expected_hash = os.getenv("SOUL_KEY_HASH")
+    if not expected_hash:
+        logging.error("SOUL_KEY_HASH not set in environment")
+        return False
+    return hashlib.sha256(soul_key.encode()).hexdigest() == expected_hash
 
 class Core:
     def __init__(self, soul_key, heart):
@@ -307,13 +305,12 @@ class Core:
     def require_soul_key_approval(self):
         if not self.soul_key_valid():
             raise PermissionError("Soul key required.")
-
-    def soul_key_valid(self):
-        try:
-            dev = usb.core.find(idVendor=0x1234, idProduct=0x5678)  # Replace with your USB device IDs
-            return dev is not None
-        except:
-            return False
+def soul_key_valid(soul_key):
+    expected_hash = os.getenv("SOUL_KEY_HASH")
+    if not expected_hash:
+        logging.error("SOUL_KEY_HASH not set in environment")
+        return False
+    return hashlib.sha256(soul_key.encode()).hexdigest() == expected_hash
 
 class KnowledgeBase:
     def __init__(self):
@@ -386,6 +383,20 @@ def login():
         return jsonify({'token': token})
     except Exception as e:
         return jsonify({'error': str(e)}), 400
+
+@app.route("/api/transfer", methods=["POST"])
+@limiter.limit("5 per minute")
+def transfer():
+    data = request.json
+    user_id = data.get("user_id")
+    soul_key = data.get("soul_key")
+    ethical = data.get("ethical", False)
+    if not soul_key_valid(soul_key):
+        return jsonify({"error": "Invalid soul key"}), 403
+    token = jwt.encode({"user_id": user_id, "exp": datetime.now() + timedelta(hours=1)}, "secret", algorithm="HS256")
+    refresh_token = jwt.encode({"user_id": user_id, "exp": datetime.now() + timedelta(days=7)}, "secret", algorithm="HS256")
+    vault.store_key(user_id, soul_key)
+    return jsonify({"token": token, "refresh_token": refresh_token})
 
 @app.route('/api/insight', methods=['POST'])
 @require_auth
