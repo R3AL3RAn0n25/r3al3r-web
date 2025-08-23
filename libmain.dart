@@ -1,170 +1,63 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'dart:async';
+import 'package:encrypt/encrypt.dart' as encrypt;
+import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:speech_to_text/speech_to_text.dart';
+import 'package:flutter_tailwindcss/flutter_tailwindcss.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:crypto/crypto.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await _initNotifications();
   runApp(R3AL3RApp());
+}
+
+FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+
+Future<void> _initNotifications() async {
+  const AndroidInitializationSettings initializationSettingsAndroid = AndroidInitializationSettings('app_icon');
+  final IOSInitializationSettings initializationSettingsIOS = IOSInitializationSettings();
+  final InitializationSettings initializationSettings = InitializationSettings(
+    android: initializationSettingsAndroid,
+    iOS: initializationSettingsIOS,
+  );
+  await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+}
+
+Future<void> _showNotification(String title, String body) async {
+  const AndroidNotificationDetails androidPlatformChannelSpecifics = AndroidNotificationDetails(
+    'r3al3r_channel', 'R3AL3R Notifications', 'Notifications for R3AL3R AI',
+    importance: Importance.max,
+    priority: Priority.high,
+  );
+  const NotificationDetails platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
+  await flutterLocalNotificationsPlugin.show(0, title, body, platformChannelSpecifics);
+}
+
+String sanitizeInput(String input) {
+  return input.replaceAll(RegExp(r'[<>]'), '');
 }
 
 class R3AL3RApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'R3ÆLƎR AI',
+      title: 'R3AL3R AI',
       theme: ThemeData(
-        primaryColor: Colors.green,
-        scaffoldBackgroundColor: Colors.black,
-        textTheme: TextTheme(
-          bodyText2: TextStyle(color: Colors.green),
-          button: TextStyle(color: Colors.black),
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            primary: Colors.green,
-            onPrimary: Colors.black,
-          ),
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          border: OutlineInputBorder(),
-          filled: true,
-          fillColor: Colors.black54,
-          labelStyle: TextStyle(color: Colors.green),
-        ),
+        primarySwatch: Colors.blue,
+        visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: LoginScreen(),
+      initialRoute: '/login',
+      routes: {
+        '/login': (context) => LoginScreen(),
+        '/dashboard': (context) => DashboardScreen(),
+        '/query': (context) => QueryScreen(),
+      },
     );
   }
-}
-
-class MatrixBackground extends StatefulWidget {
-  final Widget child;
-  MatrixBackground({required this.child});
-
-  @override
-  _MatrixBackgroundState createState() => _MatrixBackgroundState();
-}
-
-class _MatrixBackgroundState extends State<MatrixBackground> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  List<int> drops = [];
-  double fontSize = 14;
-  List<String> facePattern = [
-    '      1111      ',
-    '    11    11    ',
-    '   1  00  00 1  ',
-    '   1 0  0 0  1  ',
-    '    11 0 0 11   ',
-    '      1111      '
-  ];
-  int faceProgress = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: Duration(milliseconds: 33),
-    )..addListener(() {
-        setState(() {});
-      });
-    _controller.repeat();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      setState(() {
-        drops = List.filled((MediaQuery.of(context).size.width / fontSize).floor(), 1);
-      });
-    });
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        CustomPaint(
-          painter: MatrixPainter(drops, fontSize, facePattern, faceProgress, () {
-            setState(() {
-              faceProgress++;
-            });
-          }),
-          size: Size.infinite,
-        ),
-        widget.child,
-      ],
-    );
-  }
-}
-
-class MatrixPainter extends CustomPainter {
-  final List<int> drops;
-  final double fontSize;
-  final List<String> facePattern;
-  int faceProgress;
-  final VoidCallback onFaceProgress;
-
-  MatrixPainter(this.drops, this.fontSize, this.facePattern, this.faceProgress, this.onFaceProgress);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.black.withOpacity(0.05);
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), paint);
-    final textPaint = TextPainter(textDirection: TextDirection.ltr);
-    final chars = '01';
-    final faceX = size.width / 2 - (facePattern[0].length * fontSize) / 2;
-    final faceY = size.height / 2 - (facePattern.length * fontSize) / 2;
-
-    for (int i = 0; i < drops.length; i++) {
-      final x = i * fontSize;
-      final y = drops[i] * fontSize;
-      bool isFacePixel = false;
-
-      if (faceProgress < facePattern.length * facePattern[0].length) {
-        final faceRow = faceProgress ~/ facePattern[0].length;
-        final faceCol = faceProgress % facePattern[0].length;
-        final faceChar = facePattern[faceRow][faceCol];
-        if (faceChar == '1' || faceChar == '0') {
-          final facePixelX = faceX + faceCol * fontSize;
-          final facePixelY = faceY + faceRow * fontSize;
-          if ((x - facePixelX).abs() < fontSize && (y - facePixelY).abs() < fontSize) {
-            textPaint.text = TextSpan(
-              text: faceChar,
-              style: TextStyle(color: Colors.green, fontSize: fontSize, fontFamily: 'monospace'),
-            );
-            textPaint.layout();
-            textPaint.paint(canvas, Offset(x, y));
-            isFacePixel = true;
-            faceProgress++;
-            onFaceProgress();
-          }
-        }
-      }
-
-      if (!isFacePixel) {
-        final text = chars[Random().nextInt(chars.length)];
-        textPaint.text = TextSpan(
-          text: text,
-          style: TextStyle(color: Colors.green, fontSize: fontSize, fontFamily: 'monospace'),
-        );
-        textPaint.layout();
-        textPaint.paint(canvas, Offset(x, y));
-      }
-
-      if (y > size.height && Random().nextDouble() > 0.975) {
-        drops[i] = 0;
-      } else {
-        drops[i]++;
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
 
 class LoginScreen extends StatefulWidget {
@@ -173,73 +66,10 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _userIdController = TextEditingController();
-  String token = '';
-
-  Future<void> login() async {
-    final response = await http.post(
-      Uri.parse('ip-172-31-38-60.us-east-2.compute.internal'), // Replace with server IP
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'user_id': _userIdController.text}),
-    );
-    final data = jsonDecode(response.body);
-    if (data['token'] != null) {
-      setState(() {
-        token = data['token'];
-      });
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => MainScreen(token: token)),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Login failed: ${data['error']}')),
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: MatrixBackground(
-        child: Padding(
-          padding: EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text('R3ÆLƎR AI', style: TextStyle(fontSize: 32, color: Colors.green)),
-              SizedBox(height: 20),
-              TextField(
-                controller: _userIdController,
-                decoration: InputDecoration(labelText: 'User ID'),
-              ),
-              SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: login,
-                child: Text('Login'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class MainScreen extends StatefulWidget {
-  final String token;
-  MainScreen({required this.token});
-
-  @override
-  _MainScreenState createState() => _MainScreenState();
-}
-
-class _MainScreenState extends State<MainScreen> {
-  final _inputDataController = TextEditingController();
-  final _languageController = TextEditingController();
-  final _taskController = TextEditingController();
-  String _taskType = 'analysis';
-  String _output = '';
+  final TextEditingController _userIdController = TextEditingController();
+  final TextEditingController _soulKeyController = TextEditingController();
+  String _error = '';
+  final storage = FlutterSecureStorage();
   final SpeechToText _speech = SpeechToText();
   bool _speechEnabled = false;
 
@@ -254,150 +84,186 @@ class _MainScreenState extends State<MainScreen> {
     setState(() {});
   }
 
-  Future<void> _startListening() async {
-    if (_speechEnabled) {
-      await _speech.listen(
-        onResult: (result) {
-          setState(() {
-            _taskType = result.recognizedWords.toLowerCase();
-          });
-        },
+  Future<void> _login() async {
+    final userId = sanitizeInput(_userIdController.text);
+    final soulKey = sanitizeInput(_soulKeyController.text);
+    final soulKeyHash = sha256.convert(utf8.encode(soulKey)).toString();
+    final key = encrypt.Key.fromUtf8(soulKey.padRight(32, '0'));
+    final encrypter = encrypt.Encrypter(encrypt.AES(key));
+    final encrypted = encrypter.encrypt(userId, iv: encrypt.IV.fromLength(16));
+
+    try {
+      final response = await http.post(
+        Uri.parse('https://api.r3al3r.ai/api/transfer'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_id': userId,
+          'soul_key': encrypted.base64,
+          'ethical': true,
+        }),
       );
+      if (response.statusCode == 200) {
+        final token = jsonDecode(response.body)['token'];
+        final refreshToken = jsonDecode(response.body)['refresh_token'];
+        if (!JwtDecoder.isExpired(token)) {
+          await storage.write(key: 'token', value: token);
+          await storage.write(key: 'refresh_token', value: refreshToken);
+          await storage.write(key: 'user_id', value: userId);
+          Navigator.pushReplacementNamed(context, '/dashboard', arguments: {'token': token, 'user_id': userId});
+        } else {
+          setState(() => _error = 'Invalid or expired token');
+        }
+      } else {
+        setState(() => _error = 'Login failed');
+      }
+    } catch (e) {
+      setState(() => _error = 'Error: $e');
     }
   }
 
-  Future<void> generateInsight() async {
-    final response = await http.post(
-      Uri.parse('ip-172-31-38-60.us-east-2.compute.internal/'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ${widget.token}',
-      },
-      body: jsonEncode({
-        'input_data': _inputDataController.text,
-        'task_type': _taskType,
-      }),
-    );
-    final data = jsonDecode(response.body);
-    setState(() {
-      _output = data['insight'] ?? data['error'];
-    });
-  }
-
-  Future<void> generateCode() async {
-    final response = await http.post(
-      Uri.parse('ip-172-31-38-60.us-east-2.compute.internal/api/code_generate'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ${widget.token}',
-      },
-      body: jsonEncode({
-        'language': _languageController.text,
-        'task': _taskController.text,
-      }),
-    );
-    final data = jsonDecode(response.body);
-    setState(() {
-      _output = data['code'] ?? data['error'];
-    });
-  }
-
-  Future<void> subscribe() async {
-    final response = await http.post(
-      Uri.parse('http://your-server:5000/api/subscribe'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ${widget.token}',
-      },
-      body: jsonEncode({'plan': 'monthly'}),
-    );
-    final data = jsonDecode(response.body);
-    setState(() {
-      _output = data['message'] ?? data['error'];
-    });
-  }
-
-  Future<void> getInsights() async {
-    final response = await http.get(
-      Uri.parse('http://your-server:5000/api/insights'),
-      headers: {'Authorization': 'Bearer ${widget.token}'},
-    );
-    final data = jsonDecode(response.body);
-    setState(() {
-      _output = jsonEncode(data['insights'] ?? data['error'], indent: 2);
-    });
-  }
-
-  Future<void> downloadApk() async {
-    // APK download not implemented in app; use website
-    setState(() {
-      _output = 'Please download APK from the website.';
-    });
+  Future<void> _startListening() async {
+    if (_speechEnabled) {
+      await _speech.listen(onResult: (result) {
+        setState(() {
+          _soulKeyController.text = result.recognizedWords;
+        });
+      });
+    } else {
+      setState(() => _error = 'Speech recognition not available');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: MatrixBackground(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text('R3ÆLƎR AI', style: TextStyle(fontSize: 32)),
-              SizedBox(height: 20),
-              TextField(
-                controller: _inputDataController,
-                decoration: InputDecoration(labelText: 'Input Data (CSV path)'),
-              ),
-              DropdownButton<String>(
-                value: _taskType,
-                items: ['analysis', 'prediction', 'ideation', 'pattern', 'treadmill']
-                    .map((value) => DropdownMenuItem(
-                          value: value,
-                          child: Text(value),
-                        ))
-                    .toList(),
-                onChanged: (value) => setState(() {
-                  _taskType = value!;
-                }),
-              ),
-              ElevatedButton(
-                onPressed: generateInsight,
-                child: Text('Generate Insight'),
-              ),
-              TextField(
-                controller: _languageController,
-                decoration: InputDecoration(labelText: 'Language (e.g., Python)'),
-              ),
-              TextField(
-                controller: _taskController,
-                decoration: InputDecoration(labelText: 'Task (e.g., print hello)'),
-              ),
-              ElevatedButton(
-                onPressed: generateCode,
-                child: Text('Generate Code'),
-              ),
-              ElevatedButton(
-                onPressed: subscribe,
-                child: Text('Subscribe'),
-              ),
-              ElevatedButton(
-                onPressed: getInsights,
-                child: Text('View Insights'),
-              ),
-              ElevatedButton(
-                onPressed: downloadApk,
-                child: Text('Download APK'),
-              ),
-              ElevatedButton(
-                onPressed: _speechEnabled ? _startListening : null,
-                child: Text('Voice Input'),
-              ),
-              SizedBox(height: 20),
-              Text(_output, style: TextStyle(fontFamily: 'monospace')),
-            ],
-          ),
+      appBar: AppBar(title: Text('R3AL3R AI Login')),
+      body: Padding(
+        padding: EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            TailwindTextField(
+              controller: _userIdController,
+              label: 'User ID',
+              placeholder: 'Enter your user ID',
+            ),
+            TailwindTextField(
+              controller: _soulKeyController,
+              label: 'Soul Key',
+              placeholder: 'Enter your soul key',
+              obscureText: true,
+            ),
+            TailwindButton(
+              onPressed: _login,
+              child: Text('Login'),
+            ),
+            TailwindButton(
+              onPressed: _startListening,
+              child: Text('Speak Soul Key'),
+            ),
+            if (_error.isNotEmpty)
+              Text(_error, style: TextStyle(color: Colors.red)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class DashboardScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final args = ModalRoute.of(context)!.settings.arguments as Map;
+    final token = args['token'];
+    final userId = args['user_id'];
+    return Scaffold(
+      appBar: AppBar(title: Text('R3AL3R Dashboard')),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('Welcome, $userId!'),
+            TailwindButton(
+              onPressed: () => Navigator.pushNamed(context, '/query', arguments: {'token': token, 'user_id': userId}),
+              child: Text('Make a Query'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class QueryScreen extends StatefulWidget {
+  @override
+  _QueryScreenState createState() => _QueryScreenState();
+}
+
+class _QueryScreenState extends State<QueryScreen> {
+  final TextEditingController _queryController = TextEditingController();
+  String _response = '';
+  final storage = FlutterSecureStorage();
+
+  Future<void> _submitQuery() async {
+    final args = ModalRoute.of(context)!.settings.arguments as Map;
+    final token = args['token'];
+    final userId = args['user_id'];
+    final query = sanitizeInput(_queryController.text);
+
+    try {
+      if (JwtDecoder.isExpired(token)) await _refreshToken();
+      final response = await http.post(
+        Uri.parse('https://api.r3al3r.ai/api/query_anything'),
+        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+        body: jsonEncode({'user_id': userId, 'query': query}),
+      );
+      if (response.statusCode == 200) {
+        setState(() => _response = jsonDecode(response.body)['response_id']);
+        await _showNotification('Query Submitted', 'Your query is queued for ethical review');
+      } else {
+        setState(() => _response = 'Error: ${jsonDecode(response.body)['error']}');
+      }
+    } catch (e) {
+      setState(() => _response = 'Error: $e');
+    }
+  }
+
+  Future<void> _refreshToken() async {
+    final refreshToken = await storage.read(key: 'refresh_token');
+    if (refreshToken != null) {
+      final response = await http.post(
+        Uri.parse('https://api.r3al3r.ai/api/refresh_token'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'refresh_token': refreshToken}),
+      );
+      if (response.statusCode == 200) {
+        final newToken = jsonDecode(response.body)['token'];
+        await storage.write(key: 'token', value: newToken);
+        return;
+      }
+    }
+    Navigator.pushReplacementNamed(context, '/login');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Query R3AL3R')),
+      body: Padding(
+        padding: EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            TailwindTextField(
+              controller: _queryController,
+              label: 'Query',
+              placeholder: 'Ask anything...',
+            ),
+            TailwindButton(
+              onPressed: _submitQuery,
+              child: Text('Submit Query'),
+            ),
+            if (_response.isNotEmpty)
+              Text(_response, style: TextStyle(color: _response.contains('Error') ? Colors.red : Colors.green)),
+          ],
         ),
       ),
     );
