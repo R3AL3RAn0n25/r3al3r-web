@@ -1,4 +1,3 @@
-```
 torch
 pandas
 numpy
@@ -30,6 +29,5 @@ Pillow
 rdflib
 aif360
 faiss-cpu
-jwt_decoder
+python-jwt
 pybreaker
-```
