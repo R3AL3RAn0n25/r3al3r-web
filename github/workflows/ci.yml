@@ -1,4 +1,3 @@
-```yaml
 name: R3AL3R CI/CD
 
 on:
@@ -16,20 +15,30 @@ jobs:
     - name: Set up Flutter
       uses: subosito/flutter-action@v2
       with:
-        flutter-version: '3.24.0'
-    - name: Install dependencies
+        flutter-version: '3.24.1'
+    - name: Install Flutter dependencies
       run: flutter pub get
-    - name: Run tests
+      working-directory: mobile
+    - name: Run Flutter tests
       run: flutter test
+      working-directory: mobile
     - name: Build APK
       run: flutter build apk --release
+      working-directory: mobile
     - name: Build iOS
       run: flutter build ios --release --no-codesign
+      working-directory: mobile
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    - name: Install Python dependencies
+      run: pip install -r requirements.txt
+      working-directory: backend
     - name: Upload artifacts
       uses: actions/upload-artifact@v3
       with:
         name: app-builds
         path: |
-          build/app/outputs/flutter-apk/app-release.apk
-          build/ios/iphoneos/Runner.app
-```
+          mobile/build/app/outputs/flutter-apk/app-release.apk
+          mobile/build/ios/iphoneos/Runner.app
