@@ -1,15 +1,12 @@
 name: R3AL3R CI/CD
-
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v3
     - name: Set up Flutter
@@ -25,9 +22,6 @@ jobs:
     - name: Build APK
       run: flutter build apk --release
       working-directory: mobile
-    - name: Build iOS
-      run: flutter build ios --release --no-codesign
-      working-directory: mobile
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
@@ -42,3 +36,4 @@ jobs:
         path: |
           mobile/build/app/outputs/flutter-apk/app-release.apk
           mobile/build/ios/iphoneos/Runner.app
+          web/index.html
